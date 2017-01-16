@@ -41,8 +41,6 @@ def crawler():
 					string = re.sub(".*=","",string)
 					print(string)
 					n += 1
-			    
-
 	except Exception as err:
 		print(err)
 
