@@ -6,7 +6,7 @@ from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
 
 arr = []
-login_Failed = "http://www.pof.com/viewrespond.aspx?loginError=1&usr=RkFGQkNDQzYxQTA0Qzk5RDc5MUM2NjM2MzJFNEU4MUMzNUM0OTI4RkM5NjlDM0U4OEFCMEZFOTlCNzZEOEUxOTc1QkQ2OERBMThBM0RCREUxNEJBQzEwOENBRjc3QUYyQkE2NDhDOTZGQTkwMEIzNERGRDgzREUwOTQ4NUYwOUQzNTVCNTVCNDQyNDcwRTI2MTM0QkJERjg1RjU1MzU2MUY1NEFBMzQ5NTMwNDMzMDI0RDU2M0Y4MUNBRTU1MDFENkFEMDRFOEFFQkJCREQ0RTdGMzQ4OTAxODA2QzQyM0Y1MDBENDU3OTg3Mzk4QjVCQzVDMDUxMDI0MTY4REVBNkE4MDNDNjUzM0Y2QzQyNUYyM0YyM0JBNUE1REU4NzlC0"
+login_Failed = "http://www.pof.com/viewrespond.aspx?loginError=1"
 browser=webdriver.PhantomJS()
 browser.set_window_size(1024, 768)
 new_tab=webdriver.PhantomJS()
@@ -16,47 +16,59 @@ def checkFile(profile_id):
 	if profile_id in open('CONTACT_LOG.txt').read():
 		return True
 
-def crawler():
+def crawler(url_link,page_num,num):
+	n=num
+	count=0
+	page=page_num
+	contact_log = open("CONTACT_LOG.txt","a")
+	browser.get(url_link)
+	links = browser.find_elements_by_class_name('link')
+	os.system('cls')
+	print("[+] Page: %d"%(page+1))
+	print("[+] Scraping...")
+	for link in links:
+		if n == int(num_matches_to_visit):
+			break
+		else:
+			profile_link = link.get_attribute("href")
+			profile_id = re.sub(".*=","",profile_link)
+			exist = checkFile(profile_id)
+			if not exist:
+				new_tab.get(profile_link)
+				user = new_tab.find_element_by_id("username")
+				print("Profile_ID: %s \tAccount Name: %s\n"%(profile_id,user.text))
+				contact_log.write("Profile_ID: %s \tAccount Name: %s\n"%(profile_id,user.text))
+				count += 1
+				n += 1
+			else:
+				count += 1
+				pass
+		if count == 20:
+			browser.find_element_by_xpath("""//*[@id="searchresults"]/center/span/a["""+str(page+1)+"""]""").click()
+			new_page = browser.current_url
+			crawler(new_page,page+1,n) 
+				
+def login():
 	try:
-		n=0
-		contact_log = open("CONTACT_LOG.txt","a")
-		browser.get("http://www.pof.com/")
 		os.system('cls')
 		print("[+] Logging In...")	
+		browser.get("http://www.pof.com/")
 		browser.find_element_by_id("logincontrol_username").send_keys(username + Keys.TAB)
 		time.sleep(1)
 		browser.find_element_by_id("logincontrol_password").send_keys(password + Keys.RETURN)
 		browser.save_screenshot('screenie.png')
 		time.sleep(1)
-		browser.get(URL)
-		if browser.current_url == login_Failed:
-			print("[-] Error In Login, Incorrect Email or Password\n")
+		valid = browser.current_url
+		valid = re.sub("&.*","",valid)
+		if valid == login_Failed:
+			print("[-] Error In Logging In, Incorrect Email or Password\n")
 			browser.close()
 			exit(0)
 		else:
 			print("\n[+] Success! Logged In, Bot Starting!")
 			time.sleep(2)
-			os.system('cls')
 			browser.save_screenshot('screenie2.png')
-			links = browser.find_elements_by_class_name('link')
-			print("[+] Scraping...")
-			for link in links:
-				if n == int(num_matches_to_visit):
-					break
-				else:
-					profile_link = link.get_attribute("href")
-					profile_id = re.sub(".*=","",profile_link)
-					exist = checkFile(profile_id)
-					if not exist:
-						new_tab.get(profile_link)
-						user = new_tab.find_element_by_id("username")
-						print("Profile_ID: %s \tAccount Name: %s\n"%(profile_id,user.text))
-						contact_log.write("Profile_ID: %s \tAccount Name: %s\n"%(profile_id,user.text))
-						n += 1
-					else:
-						pass
-			new_tab.close()
-			browser.close()
+			crawler(URL,0,0)
 	except Exception as err:
 		print(err)
 
@@ -65,15 +77,18 @@ def openFile(options):
 	global num_matches_to_visit
 	global message_file
 	global max_wait 
-	with open(options,'r') as csvfile:
-		csvreader = csv.reader(csvfile, delimiter=',')
-		for row in csvreader:
-			arr.append(row)
-	URL = arr[0][1]
-	num_matches_to_visit = arr[1][1]
-	message_file = arr[2][1]
-	max_wait = arr[3][1]
-	crawler()
+	try:
+		with open(options,'r') as csvfile:
+			csvreader = csv.reader(csvfile, delimiter=',')
+			for row in csvreader:
+				arr.append(row)
+		URL = arr[0][1]
+		num_matches_to_visit = arr[1][1]
+		message_file = arr[2][1]
+		max_wait = arr[3][1]
+		login()
+	except Exception as err:
+		print(err)
 
 def main():
 	global username
@@ -87,7 +102,6 @@ def main():
 		print(parser.usage)
 		exit(0)
 	else:
-		print("[+] Warming Up...")
 		username = options.username
 		password = options.password
 		options = options.options
