@@ -39,76 +39,105 @@ def checkFile(profile_id):
 		return True
 
 def crawler(url_link,page_num,num,log,debug,count):
-	if log:
-		DEBUG_LOG = open("DEBUG.log","a")
 	printcount = count
 	n=num
 	count=0
 	page=page_num
-	contact_log = open("CONTACT_LOG.txt","a")
-	message = open(message_file,"r")
-	message_string = message.read()
-	browser.get(url_link)
-	links = browser.find_elements_by_class_name('link')
-	search_results = browser.find_element_by_xpath("""//*[@id="results"]""")
-	search_results = search_results.get_attribute('innerHTML')
-	search_results = search_results.split(' ')
-	if log and printcount == 0:
-		DEBUG_LOG.write("%s --- START ----\n"%(getDateTime()))
-		DEBUG_LOG.write("%s CONTACT_LOG.txt Loaded. Contacts Found: %d\n"%(getDateTime(), countContacts()))
-		DEBUG_LOG.write("%s Number of matching search results: %s\n"%(getDateTime(),search_results[2]))
-	if debug: 
-		if printcount == 0:
-			print("%s CONTACT_LOG.txt Loaded. Contacts Found: %d"%(getDateTime(), countContacts()))
-			print("%s Number of matching search results: %s"%(getDateTime(),search_results[2]))
-			print("%s [+] Page %d Scraping..."%(getDateTime(), page+1))
-		if printcount > 0:
-			print("%s [+] Page %d Scraping..."%(getDateTime(), page+1))
-	if contacted and printcount == 0:
-		try:
-			Total_Contacts =  search_results[2].split('+')
-			plus='+'
-		except:
-			Total_Contacts =  search_results[2]
-			plus=''
-		Contact = countContacts()
-		left_to_contact = int(Total_Contacts[0]) - int(Contact)
-		print("Total number of Contacts: %s"%(search_results[2]))
-		print("Already Contacted: %s"%(countContacts()))
-		print("Left to Contact: %d%s"%(left_to_contact,plus))
-	for link in links:
-		if n == int(num_matches_to_visit):
-			if log:
-				DEBUG_LOG.write("%s --- END ----\n"%(getDateTime()))
-				DEBUG_LOG.close()
-			if debug:
-				print("%s [+] Finished Scraping\n"%(getDateTime()))
-			break
-		else:
-			profile_link = link.get_attribute("href")
-			profile_id = re.sub(".*=","",profile_link)
-			exist = checkFile(profile_id)
-			if not exist:
-				new_tab.get(profile_link)
-				user = new_tab.find_element_by_id("username")
+	try:
+		if log:
+			DEBUG_LOG = open("DEBUG.log","a")
+		contact_log = open("CONTACT_LOG.txt","a")
+		message = open(message_file,"r")
+		message_string = message.read()
+		browser.get(url_link)
+		links = browser.find_elements_by_class_name('link')
+		search_results = browser.find_element_by_xpath("""//*[@id="results"]""")
+		search_results = search_results.get_attribute('innerHTML')
+		search_results = search_results.split(' ')
+		if log and printcount == 0:
+			DEBUG_LOG.write("%s --- START ----\n"%(getDateTime()))
+			DEBUG_LOG.write("%s CONTACT_LOG.txt Loaded. Contacts Found: %d\n"%(getDateTime(), countContacts()))
+			DEBUG_LOG.write("%s Number of matching search results: %s\n"%(getDateTime(),search_results[2]))
+		if debug: 
+			if printcount == 0:
+				print("%s CONTACT_LOG.txt Loaded. Contacts Found: %d"%(getDateTime(), countContacts()))
+				print("%s Number of matching search results: %s"%(getDateTime(),search_results[2]))
+				print("%s [+] Page %d Scraping..."%(getDateTime(), page+1))
+			if printcount > 0:
+				print("%s [+] Page %d Scraping..."%(getDateTime(), page+1))
+		if contacted and log and printcount == 0:
+			try:
+				Total_Contacts =  search_results[2].split('+')
+				plus='+'
+			except:
+				Total_Contacts =  search_results[2]
+				plus=''
+			Contact = countContacts()
+			left_to_contact = int(Total_Contacts[0]) - int(Contact)
+			DEBUG_LOG.write("%s Total number of Contacts: %s\n"%(getDateTime(), search_results[2]))
+			DEBUG_LOG.write("%s Already Contacted: %s\n"%(getDateTime(), countContacts()))
+			DEBUG_LOG.write("%s Left to Contact: %d%s\n"%(getDateTime(), left_to_contact,plus))
+		elif contacted and printcount == 0:
+			try:
+				Total_Contacts =  search_results[2].split('+')
+				plus='+'
+			except:
+				Total_Contacts =  search_results[2]
+				plus=''
+			Contact = countContacts()
+			left_to_contact = int(Total_Contacts[0]) - int(Contact)
+			print("%s Total number of Contacts: %s"%(getDateTime(), search_results[2]))
+			print("%s Already Contacted: %s"%(getDateTime(), countContacts()))
+			print("%s Left to Contact: %d%s"%(getDateTime(), left_to_contact,plus))
+		
+		for link in links:
+			if n == int(num_matches_to_visit):
 				if log:
-					DEBUG_LOG.write("%s Sent msg to: %s\n"%(getDateTime(), user.text))
+					DEBUG_LOG.write("%s --- END ----\n"%(getDateTime()))
+					DEBUG_LOG.close()
 				if debug:
-					print("%s [+] Sent msg to: %s"%(getDateTime(), user.text))
-				#new_tab.find_element_by_class_name("profile").send_keys(message_string)
-				#new_tab.save_screenshot('message.png')
-				contact_log.write("Profile_ID: %s \tAccount Name: %s\n"%(profile_id,user.text))
-				count += 1
-				n += 1
-
+					print("%s [+] Finished Scraping\n"%(getDateTime()))
+				break
 			else:
-				count += 1
-				pass
-		if count == 20:
-			browser.find_element_by_xpath("""//*[@id="searchresults"]/center/span/a["""+str(page+1)+"""]""").click()
-			new_page = browser.current_url
+				profile_link = link.get_attribute("href")
+				profile_id = re.sub(".*=","",profile_link)
+				exist = checkFile(profile_id)
+				if not exist:
+					new_tab.get(profile_link)
+					user = new_tab.find_element_by_id("username")
+					if log:
+						DEBUG_LOG.write("%s Sent msg to: %s\n"%(getDateTime(), user.text))
+						size=convert_size(os.path.getsize('DEBUG.log'))
+						if float(size.split(' ')[0]) >= 10.00 and size.split(' ')[1] == 'MB':
+							DEBUG_LOG.write("%s File Size Limit Reached...\nSparse Stopped.\n"%(getDateTime(), user.text))
+							print("File Size Limit Reached...\nSparse Stopped.")
+							DEBUG_LOG.close()
+							log = False
+					if debug:
+						print("%s [+] Sent msg to: %s"%(getDateTime(), user.text))
+					#new_tab.find_element_by_class_name("profile").send_keys(message_string)
+					#new_tab.save_screenshot('message.png')
+					contact_log.write("Profile_ID: %s \tAccount Name: %s\n"%(profile_id,user.text))
+					count += 1
+					n += 1
+				else:
+					count += 1
+					pass
+			if count == 20:
+				browser.find_element_by_xpath("""//*[@id="searchresults"]/center/span/a["""+str(page+1)+"""]""").click()
+				new_page = browser.current_url
+				if log:
+					DEBUG_LOG.close()
+				contact_log.close()
+				if debug:
+					print("%s [-] No one new to contact.."%(get_attribute()))
+				crawler(new_page,page+1,n,log,debug,1)
+	except Exception as er:
+		if log:
+			DEBUG_LOG.open("DEBUG.log","a")
+			DEBUG_LOG.write("%s ERROR: %s"%(getDateTime(), er))
 			DEBUG_LOG.close()
-			crawler(new_page,page+1,n,log,debug,1)
+		print(er)
 	new_tab.quit() 
 	browser.quit()
 				
@@ -209,6 +238,8 @@ def main():
 			contacted = args.contacted
 			if SPARSE and DEBUG:
 				param = "--SPARSE --DEBUG"
+			elif SPARSE and contacted:
+				param = "--SPARSE --TOTAL_v_CONTACTED_v_NEW"
 			elif SPARSE:
 				param = "--SPARSE"
 			else:
@@ -218,6 +249,7 @@ def main():
 				size=convert_size(os.path.getsize('DEBUG.log'))
 				if float(size.split(' ')[0]) >= 10.00 and size.split(' ')[1] == 'MB':
 					print("File Size Limit Reached...\nSparse Stopped.")
+					DEBUG_LOG.close()
 					SPARSE = False
 				else:
 					DEBUG_LOG.write("%s %s %s %s %s\n"%(getDateTime(), username, password, options, param))
