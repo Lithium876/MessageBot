@@ -1,33 +1,88 @@
-import optparse
+import argparse
 import csv
-import time, os, re
+import os, re, sys
+import time as delay
+from datetime import datetime
+from time import time 
 from os import system
 from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
 
 arr = []
 login_Failed = "http://www.pof.com/viewrespond.aspx?loginError=1"
-browser=webdriver.PhantomJS()
-browser.set_window_size(1024, 768)
-new_tab=webdriver.PhantomJS()
-new_tab.set_window_size(1024, 768)
+
+def getDateTime():
+	date_and_time = datetime.fromtimestamp(time()).strftime('%m/%d/%Y %I:%M:%S %p')
+	return date_and_time
+
+def convert_size(B):
+   B = float(B)
+   KB = float(1024)
+   MB = float(KB ** 2)
+
+   if B < KB:
+      return '{0} {1}'.format(B,'Bytes' if 0 == B > 1 else 'Byte')
+   elif KB <= B < MB:
+      return '{0:.2f} KB'.format(B/KB)
+   elif MB <= B:
+      return '{0:.2f} MB'.format(B/MB)
+
+def countContacts():
+	try:
+		count = len(open('CONTACT_LOG.txt').readlines(  ))
+		return count
+	except Exception as error:
+		print(error)
 
 def checkFile(profile_id):
 	if profile_id in open('CONTACT_LOG.txt').read():
 		return True
 
-def crawler(url_link,page_num,num):
+def crawler(url_link,page_num,num,log,debug,count):
+	if log:
+		DEBUG_LOG = open("DEBUG.log","a")
+	printcount = count
 	n=num
 	count=0
 	page=page_num
 	contact_log = open("CONTACT_LOG.txt","a")
+	message = open(message_file,"r")
+	message_string = message.read()
 	browser.get(url_link)
 	links = browser.find_elements_by_class_name('link')
-	os.system('cls')
-	print("[+] Page: %d"%(page+1))
-	print("[+] Scraping...")
+	search_results = browser.find_element_by_xpath("""//*[@id="results"]""")
+	search_results = search_results.get_attribute('innerHTML')
+	search_results = search_results.split(' ')
+	if log and printcount == 0:
+		DEBUG_LOG.write("%s --- START ----\n"%(getDateTime()))
+		DEBUG_LOG.write("%s CONTACT_LOG.txt Loaded. Contacts Found: %d\n"%(getDateTime(), countContacts()))
+		DEBUG_LOG.write("%s Number of matching search results: %s\n"%(getDateTime(),search_results[2]))
+	if debug: 
+		if printcount == 0:
+			print("%s CONTACT_LOG.txt Loaded. Contacts Found: %d"%(getDateTime(), countContacts()))
+			print("%s Number of matching search results: %s"%(getDateTime(),search_results[2]))
+			print("%s [+] Page %d Scraping..."%(getDateTime(), page+1))
+		if printcount > 0:
+			print("%s [+] Page %d Scraping..."%(getDateTime(), page+1))
+	if contacted and printcount == 0:
+		try:
+			Total_Contacts =  search_results[2].split('+')
+			plus='+'
+		except:
+			Total_Contacts =  search_results[2]
+			plus=''
+		Contact = countContacts()
+		left_to_contact = int(Total_Contacts[0]) - int(Contact)
+		print("Total number of Contacts: %s"%(search_results[2]))
+		print("Already Contacted: %s"%(countContacts()))
+		print("Left to Contact: %d%s"%(left_to_contact,plus))
 	for link in links:
 		if n == int(num_matches_to_visit):
+			if log:
+				DEBUG_LOG.write("%s --- END ----\n"%(getDateTime()))
+				DEBUG_LOG.close()
+			if debug:
+				print("%s [+] Finished Scraping\n"%(getDateTime()))
 			break
 		else:
 			profile_link = link.get_attribute("href")
@@ -36,47 +91,72 @@ def crawler(url_link,page_num,num):
 			if not exist:
 				new_tab.get(profile_link)
 				user = new_tab.find_element_by_id("username")
-				print("Profile_ID: %s \tAccount Name: %s\n"%(profile_id,user.text))
+				if log:
+					DEBUG_LOG.write("%s Sent msg to: %s\n"%(getDateTime(), user.text))
+				if debug:
+					print("%s [+] Sent msg to: %s"%(getDateTime(), user.text))
+				#new_tab.find_element_by_class_name("profile").send_keys(message_string)
+				#new_tab.save_screenshot('message.png')
 				contact_log.write("Profile_ID: %s \tAccount Name: %s\n"%(profile_id,user.text))
 				count += 1
 				n += 1
+
 			else:
 				count += 1
 				pass
 		if count == 20:
 			browser.find_element_by_xpath("""//*[@id="searchresults"]/center/span/a["""+str(page+1)+"""]""").click()
 			new_page = browser.current_url
-			crawler(new_page,page+1,n) 
+			DEBUG_LOG.close()
+			crawler(new_page,page+1,n,log,debug,1)
+	new_tab.quit() 
+	browser.quit()
 				
-def login():
+def login(log, debug):
+	global browser
+	global new_tab
+	if log:
+		DEBUG_LOG = open("DEBUG.log","a")
 	try:
-		os.system('cls')
-		print("[+] Logging In...")	
+		browser=webdriver.PhantomJS()
+		browser.set_window_size(1024, 768)
+		new_tab=webdriver.PhantomJS()
+		new_tab.set_window_size(1024, 768)
+		if debug:
+			print("%s [..] Logging In..."%(getDateTime()))	
 		browser.get("http://www.pof.com/")
 		browser.find_element_by_id("logincontrol_username").send_keys(username + Keys.TAB)
-		time.sleep(1)
+		delay.sleep(1)
 		browser.find_element_by_id("logincontrol_password").send_keys(password + Keys.RETURN)
-		browser.save_screenshot('screenie.png')
-		time.sleep(1)
+		delay.sleep(1)
 		valid = browser.current_url
 		valid = re.sub("&.*","",valid)
 		if valid == login_Failed:
-			print("[-] Error In Logging In, Incorrect Email or Password\n")
+			if debug:
+				print("%s [-] Error In Logging In, Incorrect Email or Password\n"%(getDateTime()))
+			if log:
+				DEBUG_LOG.write("%s ERROR: Incorrect Email or Password\n"%(getDateTime()))
+				DEBUG_LOG.close()
 			browser.close()
 			exit(0)
 		else:
-			print("\n[+] Success! Logged In, Bot Starting!")
-			time.sleep(2)
-			browser.save_screenshot('screenie2.png')
-			crawler(URL,0,0)
+			if debug:
+				print("%s [+] Success! Logged In, Bot Starting!"%(getDateTime()))
+			delay.sleep(2)
+			crawler(URL,0,0,log,debug,0)
 	except Exception as err:
-		print(err)
+		print("%s %s"%(getDateTime(), err))
+		if log:
+			DEBUG_LOG.write("%s ERROR: %s"%(getDateTime(), err))
+			DEBUG_LOG.close()
 
-def openFile(options):
+def openFile(options,log,debug):
 	global URL
 	global num_matches_to_visit
 	global message_file
 	global max_wait 
+	if log:
+		DEBUG_LOG = open("DEBUG.log","a")
 	try:
 		with open(options,'r') as csvfile:
 			csvreader = csv.reader(csvfile, delimiter=',')
@@ -86,26 +166,65 @@ def openFile(options):
 		num_matches_to_visit = arr[1][1]
 		message_file = arr[2][1]
 		max_wait = arr[3][1]
-		login()
+		if log:
+			DEBUG_LOG.write("%s Search_URL: %s\n"%(getDateTime(), URL))
+			DEBUG_LOG.write("%s Number_of_emails_to_send: %s\n"%(getDateTime(), arr[1][1]))
+			DEBUG_LOG.write("%s Message_file: %s\n"%(getDateTime(), arr[2][1]))
+			DEBUG_LOG.write("%s Max_wait: %s\n"%(getDateTime(), arr[3][1]))
+			DEBUG_LOG.close()
+		if debug:
+			print("%s Search_URL: %s"%(getDateTime(), URL))
+			print("%s Number_of_emails_to_send: %s"%(getDateTime(), arr[1][1]))
+			print("%s Message_file: %s"%(getDateTime(), arr[2][1]))
+			print("%s Max_wait: %s"%(getDateTime(), arr[3][1]))
+		login(log,debug)
 	except Exception as err:
 		print(err)
+		if log:
+			DEBUG_LOG.write("%s ERROR: %s\n"%(getDateTime(), err))
+			DEBUG_LOG.close()
 
 def main():
 	global username
 	global password
-	parser = optparse.OptionParser('--username <USERNAME> --password <PASSWORD> --options <OPTIONFILENAME.CSV>', version="%prog 1.0")
-	parser.add_option('--username',dest='username', type='string', help='specify the username')
-	parser.add_option('--password', dest='password', type='string', help='specify user password')
-	parser.add_option('--options', dest='options', type='string', help="loads program option from CSV file")
-	(options, args) = parser.parse_args()
-	if (options.username == None or options.password == None or options.options == None):
-		print(parser.usage)
-		exit(0)
-	else:
-		username = options.username
-		password = options.password
-		options = options.options
-		openFile(options)
+	global contacted
+	try:
+		parser = argparse.ArgumentParser()
+		parser.add_argument('--username', help='specify the username')
+		parser.add_argument('--password', help='specify user password')
+		parser.add_argument('--options', dest="optionfile",help="loads program option from CSV file")
+		parser.add_argument('--SPARSE', action='store_true', default=False, dest='SPARSE', help="Logs program activities to file 'DEBUG.log'")
+		parser.add_argument('--DEBUG', action='store_true', default=False, dest='DEBUG', help="Produce verbose output suitable for debugging purposes")
+		parser.add_argument('--TOTAL_v_CONTACTED_v_NEW', action='store_true', default=False, dest='contacted', help="Return the number of users that meet the search criteria (TOTAL), the number of those users that have already been contacted (CONTACTED), and the number that have not yet been contacted (NEW)")
+		args = parser.parse_args()
+
+		if (args.username == None or args.password == None or args.optionfile == None):
+			print("Use -h or --help for help")
+		else:
+			username = args.username
+			password = args.password
+			options = args.optionfile
+			SPARSE = args.SPARSE
+			DEBUG = args.DEBUG
+			contacted = args.contacted
+			if SPARSE and DEBUG:
+				param = "--SPARSE --DEBUG"
+			elif SPARSE:
+				param = "--SPARSE"
+			else:
+				param = ''
+			if SPARSE:
+				DEBUG_LOG = open("DEBUG.log","a")
+				size=convert_size(os.path.getsize('DEBUG.log'))
+				if float(size.split(' ')[0]) >= 10.00 and size.split(' ')[1] == 'MB':
+					print("File Size Limit Reached...\nSparse Stopped.")
+					SPARSE = False
+				else:
+					DEBUG_LOG.write("%s %s %s %s %s\n"%(getDateTime(), username, password, options, param))
+					DEBUG_LOG.close()
+			openFile(options,SPARSE,DEBUG)
+	except Exception as e:
+		print(e)
 
 if __name__ == '__main__':
 	main()
