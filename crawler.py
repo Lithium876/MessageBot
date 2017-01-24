@@ -1,10 +1,11 @@
-import argparse
 import csv
+import argparse
 import os, re, sys
 import time as delay
+from time import time
+from os import system 
+from random import randint
 from datetime import datetime
-from time import time 
-from os import system
 from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
 
@@ -16,30 +17,45 @@ def getDateTime():
 	return date_and_time
 
 def convert_size(B):
-   B = float(B)
-   KB = float(1024)
-   MB = float(KB ** 2)
+	try:
+	   B = float(B)
+	   KB = float(1024)
+	   MB = float(KB ** 2)
 
-   if B < KB:
-      return '{0} {1}'.format(B,'Bytes' if 0 == B > 1 else 'Byte')
-   elif KB <= B < MB:
-      return '{0:.2f} KB'.format(B/KB)
-   elif MB <= B:
-      return '{0:.2f} MB'.format(B/MB)
+	   if B < KB:
+	      return '{0} {1}'.format(B,'Bytes' if 0 == B > 1 else 'Byte')
+	   elif KB <= B < MB:
+	      return '{0:.2f} KB'.format(B/KB)
+	   elif MB <= B:
+	      return '{0:.2f} MB'.format(B/MB)
+	except Exception as err:
+		print("%s convert_size Function ERROR: %s"%(getDateTime(), er))
+		ERROR_LOG = open("ERROR.log","a")
+		ERROR_LOG.write("%s convert_size Function ERROR: %s\n"%(getDateTime(), er))
+		ERROR_LOG.close()
 
 def countContacts():
 	try:
 		count = len(open('CONTACT_LOG.txt').readlines(  ))
 		return count
 	except Exception as error:
-		print(error)
+		print("%s countContacts Function ERROR:  %s"%(getDateTime(), er))
+		ERROR_LOG = open("ERROR.log","a")
+		ERROR_LOG.write("%s countContacts Function ERROR:  %s\n"%(getDateTime(), er))
+		ERROR_LOG.close()
 
 def checkFile(profile_id):
-	if profile_id in open('CONTACT_LOG.txt').read():
-		return True
+	try:
+		if profile_id in open('CONTACT_LOG.txt').read():
+			return True
+	except Exception as e:
+		print("%s checkFile Function ERROR: %s"%(getDateTime(), e))
+		ERROR_LOG = open("ERROR.log","a")
+		ERROR_LOG.write("%s checkFile Function ERROR: %s\n"%(getDateTime(), e))
+		ERROR_LOG.close()
 
-def crawler(url_link,page_num,num,log,debug,count):
-	printcount = count
+def crawler(url_link,page_num,num,log,debug,called):
+	printcount = called
 	n=num
 	count=0
 	page=page_num
@@ -91,6 +107,7 @@ def crawler(url_link,page_num,num,log,debug,count):
 			print("%s Left to Contact: %d%s"%(getDateTime(), left_to_contact,plus))
 		
 		for link in links:
+			random_wait_time = randint(0,int(max_wait))
 			if n == int(num_matches_to_visit):
 				if log:
 					DEBUG_LOG.write("%s --- END ----\n"%(getDateTime()))
@@ -105,39 +122,59 @@ def crawler(url_link,page_num,num,log,debug,count):
 				if not exist:
 					new_tab.get(profile_link)
 					user = new_tab.find_element_by_id("username")
-					if log:
-						DEBUG_LOG.write("%s Sent msg to: %s\n"%(getDateTime(), user.text))
-						size=convert_size(os.path.getsize('DEBUG.log'))
-						if float(size.split(' ')[0]) >= 10.00 and size.split(' ')[1] == 'MB':
-							DEBUG_LOG.write("%s File Size Limit Reached...\nSparse Stopped.\n"%(getDateTime(), user.text))
-							print("File Size Limit Reached...\nSparse Stopped.")
+					try:
+						new_tab.find_element_by_class_name("profile").send_keys(message_string)
+						delay.sleep(1)
+						new_tab.save_screenshot('message1.png')
+						if log:
+							DEBUG_LOG.write("%s Sent msg to: %s\n"%(getDateTime(), user.text))
+							size=convert_size(os.path.getsize('DEBUG.log'))
+							if float(size.split(' ')[0]) >= 10.00 and size.split(' ')[1] == 'MB':
+								DEBUG_LOG.write("%s File Size Limit Reached...\nSparse Stopped.\n"%(getDateTime(), user.text))
+								print("File Size Limit Reached...\nSparse Stopped.")
+								DEBUG_LOG.close()
+								log = False
+						if debug:
+							print("%s [+] Sent msg to: %s"%(getDateTime(), user.text))
+						contact_log.write("Profile_ID: %s \tAccount Name: %s\n"%(profile_id,user.text))
+						count += 1
+						n += 1
+						if debug:
+							print("%s Random wait time: %d"%(getDateTime(), int(random_wait_time)))
+					except Exception as msgerr:
+						if log:
+							DEBUG_LOG = open("DEBUG.log","a")
+							DEBUG_LOG.write("%s Sending Message ERROR: %s\n"%(getDateTime(), msgerr))
 							DEBUG_LOG.close()
-							log = False
-					if debug:
-						print("%s [+] Sent msg to: %s"%(getDateTime(), user.text))
-					#new_tab.find_element_by_class_name("profile").send_keys(message_string)
-					#new_tab.save_screenshot('message.png')
-					contact_log.write("Profile_ID: %s \tAccount Name: %s\n"%(profile_id,user.text))
-					count += 1
-					n += 1
+						else:
+							ERROR_LOG = open("ERROR.log","a")
+							ERROR_LOG.write("%s Sending Message  ERROR: %s\n"%(getDateTime(), msgerr))
+							ERROR_LOG.close()
+						print("%s Sending Message  ERROR: %s"%(getDateTime(), msgerr))
+						return 0
+					delay.sleep(int(random_wait_time))
 				else:
 					count += 1
 					pass
 			if count == 20:
 				browser.find_element_by_xpath("""//*[@id="searchresults"]/center/span/a["""+str(page+1)+"""]""").click()
 				new_page = browser.current_url
-				if log:
-					DEBUG_LOG.close()
 				contact_log.close()
 				if debug:
-					print("%s [-] No one new to contact.."%(get_attribute()))
+					print("%s [-] No one new to contact.."%(getDateTime()))
+				if log:
+					DEBUG_LOG.close()
 				crawler(new_page,page+1,n,log,debug,1)
 	except Exception as er:
 		if log:
-			DEBUG_LOG.open("DEBUG.log","a")
-			DEBUG_LOG.write("%s ERROR: %s"%(getDateTime(), er))
+			DEBUG_LOG = open("DEBUG.log","a")
+			DEBUG_LOG.write("%s crawler Function ERROR: %s\n"%(getDateTime(), er))
 			DEBUG_LOG.close()
-		print(er)
+		else:
+			ERROR_LOG = open("ERROR.log","a")
+			ERROR_LOG.write("%s crawler Function ERROR: %s\n"%(getDateTime(), er))
+			ERROR_LOG.close()
+		print("%s crawler Function ERROR: %s"%(getDateTime(), er))
 	new_tab.quit() 
 	browser.quit()
 				
@@ -169,15 +206,25 @@ def login(log, debug):
 			browser.close()
 			exit(0)
 		else:
+			new_tab.get("http://www.pof.com/")
+			new_tab.find_element_by_id("logincontrol_username").send_keys(username + Keys.TAB)
+			delay.sleep(1)
+			new_tab.find_element_by_id("logincontrol_password").send_keys(password + Keys.RETURN)
+			delay.sleep(1)
 			if debug:
 				print("%s [+] Success! Logged In, Bot Starting!"%(getDateTime()))
 			delay.sleep(2)
+			DEBUG_LOG.close()
 			crawler(URL,0,0,log,debug,0)
 	except Exception as err:
-		print("%s %s"%(getDateTime(), err))
+		print("%s login Function ERROR: %s"%(getDateTime(), err))
 		if log:
-			DEBUG_LOG.write("%s ERROR: %s"%(getDateTime(), err))
+			DEBUG_LOG.write("%s login Function ERROR: %s\n"%(getDateTime(), err))
 			DEBUG_LOG.close()
+		else:
+			ERROR_LOG = open("ERROR.log","a")
+			ERROR_LOG.write("%s login Function ERROR: %s\n"%(getDateTime(), err))
+			ERROR_LOG.close()
 
 def openFile(options,log,debug):
 	global URL
@@ -208,10 +255,14 @@ def openFile(options,log,debug):
 			print("%s Max_wait: %s"%(getDateTime(), arr[3][1]))
 		login(log,debug)
 	except Exception as err:
-		print(err)
+		print("%s openFile Function ERROR: %s"%(getDateTime(), err))
 		if log:
-			DEBUG_LOG.write("%s ERROR: %s\n"%(getDateTime(), err))
+			DEBUG_LOG.write("%s openFile Function ERROR: %s\n"%(getDateTime(), err))
 			DEBUG_LOG.close()
+		else:
+			ERROR_LOG = open("ERROR.log","a")
+			ERROR_LOG.write("%s openFile Function ERROR: %s\n"%(getDateTime(), err))
+			ERROR_LOG.close()
 
 def main():
 	global username
@@ -256,7 +307,10 @@ def main():
 					DEBUG_LOG.close()
 			openFile(options,SPARSE,DEBUG)
 	except Exception as e:
-		print(e)
+		print("%s main Function ERROR: %s"%(getDateTime(), e))
+		ERROR_LOG = open("ERROR.log","a")
+		ERROR_LOG.write("%s main Function ERROR: %s\n"%(getDateTime(), e))
+		ERROR_LOG.close()
 
 if __name__ == '__main__':
 	main()
