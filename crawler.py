@@ -125,7 +125,7 @@ def crawler(url_link,page_num,num,log,debug,called):
 					try:
 						new_tab.find_element_by_class_name("profile").send_keys(message_string)
 						delay.sleep(1)
-						new_tab.save_screenshot('message1.png')
+						new_tab.find_element_by_xpath("""//*[@id="quick-message"]/form/div/input[2]""").click()
 						if log:
 							DEBUG_LOG.write("%s Sent msg to: %s\n"%(getDateTime(), user.text))
 							size=convert_size(os.path.getsize('DEBUG.log'))
@@ -204,7 +204,7 @@ def login(log, debug):
 				DEBUG_LOG.write("%s ERROR: Incorrect Email or Password\n"%(getDateTime()))
 				DEBUG_LOG.close()
 			browser.close()
-			exit(0)
+			return 0
 		else:
 			new_tab.get("http://www.pof.com/")
 			new_tab.find_element_by_id("logincontrol_username").send_keys(username + Keys.TAB)
