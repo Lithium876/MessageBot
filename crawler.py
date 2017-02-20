@@ -257,22 +257,15 @@ def getSearchResults():
 	except Exception as err:
 		Error_Handler("Get Search Result", err)
 
-def crawler(url_link,page_num,num,printed):
+def crawler(url_link,page_num,num,printed,):
 	printcount=printed
 	n=num
 	count=0
+	logged=0
 	page=page_num
 	Already_Contacted = 0
 
 	try:
-		#CHECK IF MATCHES TO VISIT GREATER THAN RESULTS FOUND
-		if int(num_matches_to_visit) > int(results):
-			print("%s Matches to visit is greater than the search results\n"%(getDateTime()))
-			if LOG:
-				with open("DEBUG.log","a") as DEBUG_LOG:
-					DEBUG_LOG.write("%s Matches to visit is greater than the search results\n"%(getDateTime()))
-					DEBUG_LOG.close()
-				return 1
 		#OPEN BROWSER TO LINK IN OPTIONS.csv
 		browser.get(url_link)
 		#GET ALL LINKS OF PROFILE ON CURRENT PAGE
@@ -296,14 +289,19 @@ def crawler(url_link,page_num,num,printed):
 		for link in links:
 			#GO TO EACH PROFILE LINK FOUND
 			#STAYS WITH THE BOUND GIVEN IN THE OPTIONS.csv FILE
-			if n == int(num_matches_to_visit):
-				if LOG:
-					with open("DEBUG.log","a") as DEBUG_LOG:
-						DEBUG_LOG.write("%s --- END ----\n"%(getDateTime()))
-						DEBUG_LOG.close()
-				if DEBUG:
-					print("%s [+] Finished Scraping\n"%(getDateTime()))
-				break
+			if n == int(num_matches_to_visit) or n == int(results):
+				if logged == 0:
+					if LOG:
+						with open("DEBUG.log","a") as DEBUG_LOG:
+							DEBUG_LOG.write("%s --- END ----\n"%(getDateTime()))
+							DEBUG_LOG.close()
+					if DEBUG:
+						print("%s [+] Finished Scraping\n"%(getDateTime()))
+				if int(num_matches_to_visit) == 0:
+					logged +=1
+					pass
+				else:
+					break
 			else:
 				#GET PROFILE ID
 				profile_link = link.get_attribute("href")
@@ -320,6 +318,17 @@ def crawler(url_link,page_num,num,printed):
 					Already_Contacted +=1
 					count += 1
 					pass
+
+			#CHECKS ALREADY CONTACTED CONTACTS 		
+			if int(num_matches_to_visit) == 0:
+				profile_link = link.get_attribute("href")
+				profile_id = re.sub(".*=","",profile_link)
+				exist = checkFile(profile_id)
+				if not exist:
+					pass
+				else:
+					Already_Contacted +=1
+
 			#GOES TO NEXT PAGE WHEN ALL 20 PROFILE LINKS ON EACH PAGE HAS BEEN VISITED
 			if count == 20:
 				browser.find_element_by_xpath("""//*[@id="searchresults"]/center/span/a["""+str(page+1)+"""]""").click()
@@ -384,7 +393,7 @@ def sendMEsg(message_string,profile_link,profile_id,log):
 		#SENDS MESSAGE 
 		new_tab.find_element_by_xpath("""//*[@id="send-message-textarea"]""").send_keys(message_string)
 		delay.sleep(delayTime())
-		new_tab.find_element_by_xpath("""//*[@id="send-quick-message-submit"]""").click()
+		#new_tab.find_element_by_xpath("""//*[@id="send-quick-message-submit"]""").click()
 		new_tab.save_screenshot('ScreenShot.png')
 		delay.sleep(2)
 		new_tab.quit()
