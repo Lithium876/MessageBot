@@ -164,6 +164,7 @@ def openFile():
 				DEBUG_LOG.write("%s Number_of_emails_to_send: %s\n"%(getDateTime(), arr[1][1]))
 				DEBUG_LOG.write("%s Message_file: %s\n"%(getDateTime(), arr[2][1]))
 				DEBUG_LOG.write("%s Max_wait: %s\n"%(getDateTime(), arr[3][1]))
+				DEBUG_LOG.write("%s Number_of_contacts_in_contact_log: %d\n"%(getDateTime(),countContacts()))
 				DEBUG_LOG.close()
 		#==============================
 
@@ -173,6 +174,7 @@ def openFile():
 			print("%s Number_of_emails_to_send: %s"%(getDateTime(), arr[1][1]))
 			print("%s Message_file: %s"%(getDateTime(), arr[2][1]))
 			print("%s Max_wait: %s"%(getDateTime(), arr[3][1]))
+			print("%s Number_of_contacts_in_contact_log: %d\n"%(getDateTime(),countContacts()))
 		#===============================
 		login() #LOGIN FUNCTION CALLED
 	except Exception as err:
@@ -348,7 +350,7 @@ def crawler(url_link,page_num,num,printed,):
 
 		#'--TOTAL_v_CONTACTED_v_NEW' AND '--LOG' ENABLE
 		if contacted and LOG and printcount == 0:
-			left_to_contact = int(results) - int(Already_Contacted) - int(num_matches_to_visit)
+			left_to_contact = int(results) - int(Already_Contacted) - int(count)
 			if left_to_contact < 0:
 				left_to_contact = 0
 
@@ -358,7 +360,7 @@ def crawler(url_link,page_num,num,printed,):
 				if int(Already_Contacted) == int(results):
 					pass
 				else:
-					DEBUG_LOG.write("%s Just Contacted: %s\n"%(getDateTime(), num_matches_to_visit))
+					DEBUG_LOG.write("%s Just Contacted: %s\n"%(getDateTime(), count))
 				DEBUG_LOG.write("%s Left to Contact: %d\n"%(getDateTime(), left_to_contact))
 				DEBUG_LOG.close()
 			if DEBUG:
@@ -393,7 +395,7 @@ def sendMEsg(message_string,profile_link,profile_id,log):
 		#SENDS MESSAGE 
 		new_tab.find_element_by_xpath("""//*[@id="send-message-textarea"]""").send_keys(message_string)
 		delay.sleep(delayTime())
-		#new_tab.find_element_by_xpath("""//*[@id="send-quick-message-submit"]""").click()
+		new_tab.find_element_by_xpath("""//*[@id="send-quick-message-submit"]""").click()
 		new_tab.save_screenshot('ScreenShot.png')
 		delay.sleep(2)
 		new_tab.quit()
