@@ -1,4 +1,4 @@
-# Web_Crawler-3
+# Message Bot
 
 Functional description:
 Each time the program is run, it shall perform the following tasks
